@@ -1,26 +1,74 @@
+import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { JurisdictionData, AssetData, TokenizationCategory, AiRiskReport, EntityDetails, ProjectInfo, TokenizationState, TokenomicsData, QuizData } from '../types';
-import { MatchmakerPreferences } from '../prompts/matchmakerPrompts';
+import { MatchmakerPreferences, MATCHMAKER_PROMPT } from '../prompts/matchmakerPrompts';
+import { IMPROVE_DESCRIPTION_PROMPT } from '../prompts/projectPrompts';
+import { EXPLAIN_SPV_PROMPT, JURISDICTION_SUMMARY_PROMPT, GENERAL_REQUIREMENTS_PROMPT } from '../prompts/legalEducationPrompts';
+import { GENERATE_CASE_STUDY_PROMPT } from '../prompts/caseStudyPrompts';
+import { CHECK_TOKENIZABILITY_PROMPT } from '../prompts/tokenizabilityPrompts';
+import { GENERATE_QUIZ_PROMPT } from '../prompts/educationPrompts';
+import { GENERATE_TOKENOMICS_PROMPT } from '../prompts/tokenomicsPrompts';
+import { GENERATE_TOKEN_STRATEGY_PROMPT } from '../prompts/strategyPrompts';
+import { AUTOFILL_ASSET_GENERAL_PROMPT, AUTOFILL_ASSET_FINANCIALS_PROMPT } from '../prompts/assetPrompts';
+import { GET_REGION_RECOMMENDATIONS_PROMPT, RECOMMEND_SPV_PROMPT, GENERATE_ENTITY_DETAILS_PROMPT, ANALYZE_JURISDICTION_PROMPT } from '../prompts/jurisdictionPrompts';
+import { ANALYZE_FINANCIALS_PROMPT } from '../prompts/financialPrompts';
+import { GENERATE_BUSINESS_PLAN_PROMPT } from '../prompts/businessPlanPrompt';
+import { GENERATE_RISK_REPORT_PROMPT } from '../prompts/riskPrompts';
 
-// --- MOCK SERVICE (No External API Dependency) ---
-// This service simulates AI analysis to ensure stable deployment without dependency issues.
+// Initialize the real Gemini API client
+// Note: process.env.API_KEY must be configured in your environment
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
-export interface AiResponse {
-  text?: string;
-  risks?: string[];
-  recommendations?: string[];
-  restrictions?: string;
-  minDocs?: string[];
-  geoBlocking?: string;
-  riskNote?: string;
+// Helper to clean JSON strings from Markdown code blocks
+function cleanJson(text: string): string {
+  return text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
 }
 
-const simulateDelay = async (ms = 1000) => new Promise(resolve => setTimeout(resolve, ms));
+// Helper to reliably parse JSON from AI response
+async function generateJSON<T>(model: string, prompt: string, schema: Schema, fallback: T): Promise<T> {
+  if (!process.env.API_KEY) {
+    console.warn("AI Service: No API Key found. Using fallback.");
+    return fallback;
+  }
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: schema
+      }
+    });
+    const text = response.text || '{}';
+    return JSON.parse(cleanJson(text)) as T;
+  } catch (e) {
+    console.error("AI Generation Error:", e);
+    return fallback;
+  }
+}
+
+// Helper for text generation
+async function generateText(model: string, prompt: string, fallback: string): Promise<string> {
+  if (!process.env.API_KEY) return fallback;
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt
+    });
+    return response.text || fallback;
+  } catch (e) {
+    console.error("AI Text Generation Error:", e);
+    return fallback;
+  }
+}
 
 // --- PROJECT VISION AI ---
 
 export const improveProjectDescription = async (info: ProjectInfo, category: TokenizationCategory): Promise<string> => {
-  await simulateDelay(1500);
-  return `${info.projectName} represents a high-value opportunity in the ${category} sector. This project aims to leverage blockchain technology to provide ${info.projectGoal}, offering investors transparent access to a premium asset class with calculated risk-adjusted returns. The strategy focuses on maximizing capital efficiency while ensuring full regulatory compliance.`;
+  return generateText(
+    'gemini-2.5-flash',
+    IMPROVE_DESCRIPTION_PROMPT(info, category),
+    info.description
+  );
 };
 
 // --- JURISDICTION MATCHMAKER ---
@@ -35,58 +83,55 @@ export interface MatchmakerResult {
 }
 
 export const getJurisdictionRecommendation = async (prefs: MatchmakerPreferences): Promise<MatchmakerResult | null> => {
-  await simulateDelay(1200);
-  
-  if (prefs.investorType.includes('Retail')) {
-      return {
-          jurisdiction: "United States (Reg A+)",
-          entityType: "C-Corp or LLC",
-          reasoning: "Since you are targeting Retail investors, US Regulation A+ is the gold standard. It allows you to raise up to $75M from the general public, though it requires SEC qualification.",
-          complianceNote: "Requires filing Form 1-A with the SEC.",
-          pros: ["Access to general public", "Unlimited investors", "High trust"],
-          cons: ["High cost ($50k+)", "Slow setup (3-5 months)"]
-      };
-  } else if (prefs.capitalSource.includes('Crypto')) {
-      return {
-          jurisdiction: "UAE (ADGM/DIFC)",
-          entityType: "Special Purpose Vehicle (SPV)",
-          reasoning: "For crypto-native capital, the UAE offers the most forward-thinking regulatory framework (VARA/FSRA). ADGM specifically has robust digital asset guidance.",
-          complianceNote: "Must appoint a local corporate service provider.",
-          pros: ["0% Corporate Tax", "Crypto-friendly banks", "English Common Law"],
-          cons: ["High maintenance costs", "Strict AML reporting"]
-      };
-  }
-
-  return {
-      jurisdiction: "United States (Delaware)",
-      entityType: "Series LLC",
-      reasoning: "For a balance of speed and investor protection, a Delaware Series LLC is the standard. It allows for segregating assets into individual series, protecting them from each other's liabilities.",
-      complianceNote: "File Form D within 15 days of first sale.",
-      pros: ["Rapid setup", "Strong legal precedents", "Flexible management"],
-      cons: ["Annual Franchise Tax", "Not tax-efficient for non-US founders"]
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      jurisdiction: { type: Type.STRING },
+      entityType: { type: Type.STRING },
+      reasoning: { type: Type.STRING },
+      complianceNote: { type: Type.STRING },
+      pros: { type: Type.ARRAY, items: { type: Type.STRING } },
+      cons: { type: Type.ARRAY, items: { type: Type.STRING } }
+    }
   };
+
+  return generateJSON<MatchmakerResult | null>(
+    'gemini-2.5-flash',
+    MATCHMAKER_PROMPT(prefs),
+    schema,
+    null
+  );
 };
 
 // --- LEGAL EDUCATION HELPERS ---
 
 export const getSpvExplanation = async (persona: string): Promise<string> => {
-  await simulateDelay(800);
-  if (persona === 'Beginner') return "Imagine a safe box. You put the house inside the safe box. Investors don't own the house directly; they own keys to the safe box. The SPV is that safe box—it protects the asset.";
-  if (persona === 'Crypto Native') return "It's like a multisig wallet for the real world. The SPV is the legal wrapper (smart contract owner) that holds title to the asset, ensuring off-chain enforceability of on-chain tokens.";
-  return "A Special Purpose Vehicle (SPV) is a subsidiary company formed strictly to hold a specific asset. It isolates financial risk, so if the parent company goes bankrupt, this asset remains safe for its investors.";
+  return generateText(
+    'gemini-2.5-flash',
+    EXPLAIN_SPV_PROMPT(persona),
+    "An SPV is a separate company created to hold the asset, protecting investors."
+  );
 };
 
 export const getJurisdictionSummary = async (region: string): Promise<string> => {
-  await simulateDelay(800);
-  if (region.includes('USA')) return "The US offers the deepest capital markets via Reg D and Reg S exemptions. It is highly prestigious but comes with strict SEC oversight. The main downside is the complexity of excluding non-accredited investors.";
-  if (region.includes('UAE')) return "The UAE is a global leader for digital assets with 0% tax zones like ADGM. It offers a crypto-native environment with clear rulebooks. However, operational costs for substance can be high.";
-  if (region.includes('Europe')) return "Europe offers market access to 450M people via the new MiCA regulation. It provides high legal certainty and consumer protection. The downside is fragmented implementation across member states.";
-  return "This jurisdiction offers a developing framework for digital assets. It may offer lower costs and speed. However, investor protection laws may be less tested than in Tier-1 financial hubs.";
+  return generateText(
+    'gemini-2.5-flash',
+    JURISDICTION_SUMMARY_PROMPT(region),
+    `${region} offers specific regulations for digital assets.`
+  );
 };
 
 export const getGeneralRequirements = async (assetType: string): Promise<string[]> => {
-  await simulateDelay(800);
-  return ["Legal Entity (SPV)", "Clean Title Deed", "KYC/AML Provider"];
+  const schema: Schema = {
+    type: Type.ARRAY,
+    items: { type: Type.STRING }
+  };
+  return generateJSON<string[]>(
+    'gemini-2.5-flash',
+    GENERAL_REQUIREMENTS_PROMPT(assetType),
+    schema,
+    ["Legal Entity", "Asset Title", "Compliance Provider"]
+  );
 };
 
 // --- CASE STUDY GENERATOR ---
@@ -102,16 +147,24 @@ export interface CaseStudy {
 }
 
 export const generateCaseStudy = async (industry: string): Promise<CaseStudy | null> => {
-  await simulateDelay(1500);
-  return {
-      title: `${industry} Alpha Prime`,
-      location: "Aspen, USA",
-      year: "2020",
-      assetValue: "$18.5M",
-      summary: `A landmark tokenization of a high-value ${industry} asset. The project raised capital from 500+ accredited investors globally, offering a digital share of equity.`,
-      keyTakeaway: "Liquidity premiums can be realized even in illiquid sectors.",
-      successFactor: "Partnership with a regulated broker-dealer."
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING },
+      location: { type: Type.STRING },
+      year: { type: Type.STRING },
+      assetValue: { type: Type.STRING },
+      summary: { type: Type.STRING },
+      keyTakeaway: { type: Type.STRING },
+      successFactor: { type: Type.STRING }
+    }
   };
+  return generateJSON<CaseStudy | null>(
+    'gemini-2.5-flash',
+    GENERATE_CASE_STUDY_PROMPT(industry),
+    schema,
+    null
+  );
 };
 
 // --- TOKENIZABILITY CHECKER ---
@@ -126,152 +179,210 @@ export interface TokenizabilityReport {
 }
 
 export const checkTokenizability = async (description: string, category?: string): Promise<TokenizabilityReport | null> => {
-  await simulateDelay(2000);
-  
-  const isValid = description.length > 20;
-  
-  return {
-      isTokenizable: isValid,
-      confidenceScore: isValid ? 92 : 45,
-      recommendedStructure: category === 'Real Estate' ? "Delaware LLC or German GmbH" : "Special Purpose Vehicle (SPV)",
-      mainVerdict: isValid 
-        ? "Yes, this asset is a prime candidate for tokenization." 
-        : "Unclear. We need more details on valuation and cash flow.",
-      analysisPoints: [
-          "Asset has clear intrinsic value potential.",
-          "Legal ownership appears transferable to an SPV.",
-          "Cash flow generation supports a dividend model."
-      ],
-      nextSteps: isValid 
-        ? "Proceed to the 'Jurisdiction' step to select your legal wrapper."
-        : "Please refine the description with specific valuation figures."
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      isTokenizable: { type: Type.BOOLEAN },
+      confidenceScore: { type: Type.NUMBER },
+      recommendedStructure: { type: Type.STRING },
+      mainVerdict: { type: Type.STRING },
+      analysisPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+      nextSteps: { type: Type.STRING }
+    }
   };
+  
+  return generateJSON<TokenizabilityReport | null>(
+    'gemini-2.5-flash',
+    CHECK_TOKENIZABILITY_PROMPT(description, category),
+    schema,
+    null
+  );
 };
 
 // --- EDUCATION & QUIZ ---
 
 export const generateQuiz = async (topic: string): Promise<QuizData | null> => {
-  await simulateDelay(1000);
-  return {
-      topic,
-      questions: [
-          {
-              question: `What is the primary benefit of tokenizing ${topic}?`,
-              options: ["Instant Liquidity", "Avoiding Taxes", "Anonymous Trading", "None of the above"],
-              correctIndex: 0,
-              explanation: "Tokenization allows fractional ownership, enabling assets to be traded more easily on secondary markets."
-          },
-          {
-              question: "Which document defines the legal rights of a token holder?",
-              options: ["The Whitepaper", "The Smart Contract Code", "The Subscription Agreement", "The Marketing Deck"],
-              correctIndex: 2,
-              explanation: "The Subscription Agreement (or Offering Memo) is the legally binding contract between issuer and investor."
-          },
-          {
-              question: "Why is an SPV usually required?",
-              options: ["To pay more fees", "To isolate liability and hold the asset", "It is not required", "To hide the owner"],
-              correctIndex: 1,
-              explanation: "An SPV separates the asset's risk from the parent company and provides a clean legal container for the tokens."
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      topic: { type: Type.STRING },
+      questions: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            question: { type: Type.STRING },
+            options: { type: Type.ARRAY, items: { type: Type.STRING } },
+            correctIndex: { type: Type.INTEGER },
+            explanation: { type: Type.STRING }
           }
-      ]
+        }
+      }
+    }
   };
+  
+  return generateJSON<QuizData | null>(
+    'gemini-2.5-flash',
+    GENERATE_QUIZ_PROMPT(topic),
+    schema,
+    null
+  );
 };
 
 // --- TOKENOMICS & STRATEGY ---
 
 export const generateTokenomicsModel = async (asset: AssetData, project: ProjectInfo, jurisdiction: JurisdictionData): Promise<Partial<TokenomicsData> & { educationalNote?: string }> => {
-  await simulateDelay(1500);
-  const supply = 1000000;
-  const price = (asset.valuation || 1000000) / supply;
-  
-  return {
-      tokenName: `${asset.assetName || 'Asset'} Token`,
-      tokenSymbol: (asset.assetName?.substring(0,3) || 'AST').toUpperCase(),
-      totalSupply: supply,
-      pricePerToken: price,
-      vestingSchedule: "1 Year Cliff, 4 Year Linear",
-      allocation: { founders: 15, investors: 70, treasury: 10, advisors: 5 },
-      educationalNote: "We recommend a 15% founder allocation to align incentives, with a 1-year cliff to demonstrate long-term commitment to investors."
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      tokenName: { type: Type.STRING },
+      tokenSymbol: { type: Type.STRING },
+      totalSupply: { type: Type.NUMBER },
+      pricePerToken: { type: Type.NUMBER },
+      vestingSchedule: { type: Type.STRING },
+      educationalNote: { type: Type.STRING },
+      allocation: {
+        type: Type.OBJECT,
+        properties: {
+          founders: { type: Type.NUMBER },
+          investors: { type: Type.NUMBER },
+          treasury: { type: Type.NUMBER },
+          advisors: { type: Type.NUMBER },
+        }
+      }
+    }
   };
+
+  return generateJSON(
+    'gemini-3-pro-preview', // Use Pro for complex math/reasoning
+    GENERATE_TOKENOMICS_PROMPT(asset, project, jurisdiction),
+    schema,
+    { tokenName: 'Token', tokenSymbol: 'TKN', totalSupply: 1000000, pricePerToken: 1 }
+  );
 };
 
 export const generateTokenStrategy = async (asset: AssetData, project: ProjectInfo, jurisdiction: JurisdictionData) => {
-  await simulateDelay(1500);
-  return {
-      whyTokenize: [
-          "Unlock liquidity for early investors.",
-          "Access a global pool of capital beyond local banks.",
-          "Automate compliance and dividend distribution."
-      ],
-      taxStrategy: `In ${jurisdiction.country}, utilizing a pass-through entity like the ${jurisdiction.spvType || 'SPV'} avoids double taxation on corporate profits.`,
-      marketPositioning: "Position this as a 'Yield + Growth' hybrid token. Highlight the stability of the underlying asset combined with the efficiency of blockchain settlement.",
-      educationalNote: "Tokenomics is not just math; it is incentive design. A well-structured vesting schedule builds trust."
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      whyTokenize: { type: Type.ARRAY, items: { type: Type.STRING } },
+      taxStrategy: { type: Type.STRING },
+      marketPositioning: { type: Type.STRING },
+      educationalNote: { type: Type.STRING }
+    }
   };
+
+  return generateJSON(
+    'gemini-2.5-flash',
+    GENERATE_TOKEN_STRATEGY_PROMPT(asset, project, jurisdiction),
+    schema,
+    { whyTokenize: [], taxStrategy: "Consult a tax professional.", marketPositioning: "Growth", educationalNote: "" }
+  );
 };
 
 // --- AUTO FILL ASSETS ---
 
 export const autoFillAssetGeneral = async (info: ProjectInfo, category: TokenizationCategory): Promise<Partial<AssetData>> => {
-  await simulateDelay(1000);
-  return {
-      assetName: info.projectName || "Prime Asset",
-      valuation: info.targetRaiseAmount ? info.targetRaiseAmount * 1.5 : 5000000,
-      assetType: "Commercial",
-      industry: "Real Estate",
-      sqft: 25000,
-      address: "123 Innovation Blvd, Tech City",
-      description: `A premium ${category} asset focused on ${info.projectGoal}. High potential for growth and stable yield generation.`
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      assetName: { type: Type.STRING },
+      valuation: { type: Type.NUMBER },
+      assetType: { type: Type.STRING },
+      industry: { type: Type.STRING },
+      sqft: { type: Type.NUMBER },
+      address: { type: Type.STRING },
+      description: { type: Type.STRING }
+    }
   };
+
+  return generateJSON(
+    'gemini-2.5-flash',
+    AUTOFILL_ASSET_GENERAL_PROMPT(info, category),
+    schema,
+    {}
+  );
 };
 
 export const autoFillAssetFinancials = async (info: ProjectInfo, category: TokenizationCategory, valuation: number): Promise<any> => {
-  await simulateDelay(1000);
-  return {
-      noi: valuation * 0.08, // 8% Cap Rate estimate
-      revenue: valuation * 0.15,
-      ebitda: valuation * 0.10,
-      occupancyRate: 92,
-      existingDebt: valuation * 0.4 // 40% LTV
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      noi: { type: Type.NUMBER },
+      revenue: { type: Type.NUMBER },
+      ebitda: { type: Type.NUMBER },
+      occupancyRate: { type: Type.NUMBER },
+      existingDebt: { type: Type.NUMBER }
+    }
   };
+
+  return generateJSON(
+    'gemini-2.5-flash',
+    AUTOFILL_ASSET_FINANCIALS_PROMPT(info, category, valuation),
+    schema,
+    {}
+  );
 };
 
 // --- JURISDICTION AI ---
 
 export const getRegionRecommendations = async (country: string, category: TokenizationCategory): Promise<string[]> => {
-  await simulateDelay(600);
-  if (country === 'US') return ['Delaware', 'Wyoming', 'New York', 'Texas'];
-  if (country === 'AE') return ['DIFC', 'ADGM', 'Dubai Mainland', 'RAK ICC'];
-  if (country === 'IT') return ['Milan', 'Rome', 'Trento', 'Turin'];
-  if (country === 'UK') return ['London', 'Edinburgh', 'Manchester', 'Leeds'];
-  if (country === 'DE') return ['Berlin', 'Munich', 'Frankfurt', 'Hamburg'];
-  return ['Capital City', 'Financial District'];
+  const schema: Schema = {
+    type: Type.ARRAY,
+    items: { type: Type.STRING }
+  };
+  return generateJSON(
+    'gemini-2.5-flash',
+    GET_REGION_RECOMMENDATIONS_PROMPT(country, category),
+    schema,
+    []
+  );
 };
 
 export const getSpvRecommendation = async (country: string, region: string, category: TokenizationCategory, projectInfo?: ProjectInfo) => {
-  await simulateDelay(1000);
-  let rec = "Standard LLC";
-  if (country === 'US') rec = "Delaware Series LLC";
-  if (country === 'AE') rec = "ADGM SPV";
-  if (country === 'IT') rec = "S.r.l.";
-  if (country === 'DE') rec = "GmbH";
-  if (country === 'UK') rec = "Private Ltd";
-
-  return { 
-      recommendedSpvId: rec, 
-      reasoning: `Based on your goal of '${projectInfo?.projectGoal}', the ${rec} offers the best balance of liability protection and operational flexibility in ${region || country}.` 
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      recommendedSpvId: { type: Type.STRING },
+      reasoning: { type: Type.STRING }
+    }
   };
+  return generateJSON(
+    'gemini-2.5-flash',
+    RECOMMEND_SPV_PROMPT(country, region, category, projectInfo),
+    schema,
+    { recommendedSpvId: 'LLC', reasoning: 'Standard flexibility.' }
+  );
 };
 
 export const generateEntityDetails = async (country: string, region: string, spvType: string, assetName: string): Promise<Partial<EntityDetails>> => {
-  await simulateDelay(1200);
-  return {
-      companyName: `${assetName.replace(/\s+/g, '')} ${spvType}`,
-      shareCapital: 10000,
-      registeredAddress: `123 Ledger Lane, ${region}, ${country}`,
-      directors: ["Alice Founder", "Bob Director"],
-      formationAgent: "Global Corporate Services Ltd"
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      companyName: { type: Type.STRING },
+      shareCapital: { type: Type.NUMBER },
+      registeredAddress: { type: Type.STRING },
+      directors: { type: Type.ARRAY, items: { type: Type.STRING } },
+      formationAgent: { type: Type.STRING }
+    }
   };
+  return generateJSON(
+    'gemini-2.5-flash',
+    GENERATE_ENTITY_DETAILS_PROMPT(country, region, spvType, assetName),
+    schema,
+    {}
+  );
 };
+
+export interface AiResponse {
+  text?: string;
+  risks?: string[];
+  recommendations?: string[];
+  restrictions?: string;
+  minDocs?: string[];
+  geoBlocking?: string;
+  riskNote?: string;
+}
 
 export const analyzeJurisdiction = async (
     country: string, 
@@ -280,81 +391,71 @@ export const analyzeJurisdiction = async (
     entityDetails?: EntityDetails,
     projectInfo?: ProjectInfo
 ): Promise<AiResponse> => {
-  await simulateDelay(2000);
-  return {
-      restrictions: `In ${country}, a ${spvType} cannot publicly solicit retail investors without a registered prospectus (or relying on an exemption like Reg A+ / Crowdfunding).`,
-      minDocs: ["Articles of Association", "Memorandum of Understanding", "Director Resolution", "KYC Manual"],
-      geoBlocking: "We recommend geo-blocking sanctioned countries (OFAC list) and potentially US retail investors if using Reg S.",
-      riskNote: "Ensure your 'Registered Office' is maintained annually to avoid involuntary dissolution by the state registry."
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      restrictions: { type: Type.STRING },
+      minDocs: { type: Type.ARRAY, items: { type: Type.STRING } },
+      geoBlocking: { type: Type.STRING },
+      riskNote: { type: Type.STRING }
+    }
   };
+  return generateJSON(
+    'gemini-2.5-flash',
+    ANALYZE_JURISDICTION_PROMPT(country, entityDetails?.registrationState || '', spvType, category, entityDetails, projectInfo),
+    schema,
+    { text: "Analysis unavailable." }
+  );
 };
 
 // --- ASSET & FINANCIALS AI ---
 
 export const analyzeAssetFinancials = async (data: AssetData): Promise<AiResponse> => {
-  await simulateDelay(1500);
-  return {
-      text: `The asset shows strong fundamentals with a valuation of $${data.valuation?.toLocaleString()}. The debt level appears manageable.`,
-      risks: [
-          "Interest rate sensitivity if debt is variable.",
-          "Market liquidity for this specific asset class.",
-          "Operational costs exceeding projections."
-      ],
-      recommendations: [
-          "Consider fixing debt interest rates.",
-          "Maintain a 6-month operating reserve in the SPV.",
-          "Conduct a third-party appraisal before token issuance."
-      ]
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      text: { type: Type.STRING },
+      risks: { type: Type.ARRAY, items: { type: Type.STRING } },
+      recommendations: { type: Type.ARRAY, items: { type: Type.STRING } }
+    }
   };
+  return generateJSON(
+    'gemini-2.5-flash',
+    ANALYZE_FINANCIALS_PROMPT(data),
+    schema,
+    { text: "Financial analysis unavailable." }
+  );
 };
 
 // --- BUSINESS PLAN GENERATOR ---
 
 export const generateBusinessPlan = async (asset: AssetData, projectInfo: ProjectInfo): Promise<string> => {
-  await simulateDelay(2500);
-  return `
-# Executive Summary
-${projectInfo.projectName} offers a unique opportunity to participate in a high-value ${asset.category} asset located in ${asset.address || 'a prime location'}. By leveraging blockchain technology, we are democratizing access to this traditionally illiquid investment.
-
-# Investment Opportunity
-The ${asset.category} market has shown resilient growth. This asset, valued at $${asset.valuation?.toLocaleString()}, is positioned to capitalize on local demand drivers. Our strategy focuses on ${projectInfo.projectGoal}, delivering value through active management and technological efficiency.
-
-# Financial Projections
-Based on a valuation of $${asset.valuation?.toLocaleString()}, we project steady cash flows.
-- **Projected Revenue:** Stable yield generation via lease/commercial activities.
-- **Expense Ratio:** Optimized through digital management and reduced intermediaries.
-- **Target Returns:** Competitive risk-adjusted APY.
-
-# Exit Strategy
-We aim to provide liquidity through:
-1. **Secondary Market Trading:** Listing tokens on regulated ATS/MTF platforms.
-2. **Refinancing:** Returning capital to investors upon asset stabilization.
-3. **Strategic Sale:** Disposition of the asset at the end of the holding period (5-7 years).
-  `;
+  // Pro model for long form content
+  return generateText(
+    'gemini-3-pro-preview',
+    GENERATE_BUSINESS_PLAN_PROMPT(asset, projectInfo),
+    "# Executive Summary\n\nGeneration failed."
+  );
 };
 
 // --- RISK REPORT GENERATOR ---
 
 export const generateRiskReport = async (state: TokenizationState): Promise<AiRiskReport> => {
-  await simulateDelay(2000);
-  const score = state.compliance.regFramework === 'None' ? 45 : 88;
-  
-  return {
-      score: score,
-      level: score > 80 ? 'Low' : 'Medium',
-      warnings: [
-          "Ensure secondary market trading venues support your token standard.",
-          "Verify tax withholding requirements for international investors."
-      ],
-      opportunities: [
-          "Expand investor base to Asia/EU via Reg S.",
-          "Enable DeFi collateralization for instant liquidity."
-      ],
-      legalRoadmap: [
-          "Incorporate SPV in selected jurisdiction.",
-          "Draft Offering Memorandum & Subscription Agreement.",
-          "Deploy Smart Contracts & White-list Investors.",
-          "Launch Primary Sale."
-      ]
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      score: { type: Type.NUMBER },
+      level: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
+      warnings: { type: Type.ARRAY, items: { type: Type.STRING } },
+      opportunities: { type: Type.ARRAY, items: { type: Type.STRING } },
+      legalRoadmap: { type: Type.ARRAY, items: { type: Type.STRING } }
+    }
   };
+  
+  return generateJSON(
+    'gemini-3-pro-preview',
+    GENERATE_RISK_REPORT_PROMPT(state),
+    schema,
+    { score: 50, level: 'Medium', warnings: [], opportunities: [], legalRoadmap: [] }
+  );
 };
