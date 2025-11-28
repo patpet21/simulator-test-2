@@ -1,74 +1,29 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
 import { JurisdictionData, AssetData, TokenizationCategory, AiRiskReport, EntityDetails, ProjectInfo, TokenizationState, TokenomicsData, QuizData } from '../types';
-import { 
-  GET_REGION_RECOMMENDATIONS_PROMPT, 
-  ANALYZE_JURISDICTION_PROMPT,
-  RECOMMEND_SPV_PROMPT,
-  GENERATE_ENTITY_DETAILS_PROMPT
-} from '../prompts/jurisdictionPrompts';
-import { ANALYZE_FINANCIALS_PROMPT } from '../prompts/financialPrompts';
-import { GENERATE_BUSINESS_PLAN_PROMPT } from '../prompts/businessPlanPrompt';
-import { GENERATE_RISK_REPORT_PROMPT } from '../prompts/riskPrompts';
-import { AUTOFILL_ASSET_GENERAL_PROMPT, AUTOFILL_ASSET_FINANCIALS_PROMPT } from '../prompts/assetPrompts';
-import { GENERATE_TOKENOMICS_PROMPT } from '../prompts/tokenomicsPrompts';
-import { GENERATE_TOKEN_STRATEGY_PROMPT } from '../prompts/strategyPrompts';
-import { GENERATE_QUIZ_PROMPT } from '../prompts/educationPrompts';
-import { CHECK_TOKENIZABILITY_PROMPT } from '../prompts/tokenizabilityPrompts';
-import { MATCHMAKER_PROMPT, MatchmakerPreferences } from '../prompts/matchmakerPrompts';
-import { EXPLAIN_SPV_PROMPT, JURISDICTION_SUMMARY_PROMPT, GENERAL_REQUIREMENTS_PROMPT } from '../prompts/legalEducationPrompts';
-import { GENERATE_CASE_STUDY_PROMPT } from '../prompts/caseStudyPrompts';
-import { IMPROVE_DESCRIPTION_PROMPT } from '../prompts/projectPrompts';
+import { MatchmakerPreferences } from '../prompts/matchmakerPrompts';
 
-// Initialize Gemini with safe environment variable access for Vite
-const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || "AIzaSyDjJo7yKpRccHQVeWnuliRl6V1ysu1jL6A";
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
-
-const MODEL_NAME = "gemini-2.5-flash";
+// --- MOCK SERVICE (No External API Dependency) ---
+// This service simulates AI analysis to ensure stable deployment without dependency issues.
 
 export interface AiResponse {
   text?: string;
   risks?: string[];
   recommendations?: string[];
-  // New Educational Fields
   restrictions?: string;
   minDocs?: string[];
   geoBlocking?: string;
   riskNote?: string;
 }
 
-// Helper to safely parse JSON
-const safeJsonParse = (text: string | undefined, fallback: any) => {
-  if (!text) return fallback;
-  try {
-    // Attempt to clean markdown code blocks if present
-    const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    const result = JSON.parse(cleanText);
-    return result || fallback;
-  } catch (e) {
-    console.warn("AI JSON Parse Error:", e, text);
-    return fallback;
-  }
-};
+const simulateDelay = async (ms = 1000) => new Promise(resolve => setTimeout(resolve, ms));
 
 // --- PROJECT VISION AI ---
 
 export const improveProjectDescription = async (info: ProjectInfo, category: TokenizationCategory): Promise<string> => {
-  try {
-    const prompt = IMPROVE_DESCRIPTION_PROMPT(info, category);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-    });
-    return response.text.trim();
-  } catch (e) {
-    console.error("Improve Description Failed", e);
-    return info.description; // Fallback to original
-  }
+  await simulateDelay(1500);
+  return `${info.projectName} represents a high-value opportunity in the ${category} sector. This project aims to leverage blockchain technology to provide ${info.projectGoal}, offering investors transparent access to a premium asset class with calculated risk-adjusted returns. The strategy focuses on maximizing capital efficiency while ensuring full regulatory compliance.`;
 };
 
-// --- JURISDICTION MATCHMAKER (NEW) ---
+// --- JURISDICTION MATCHMAKER ---
 
 export interface MatchmakerResult {
   jurisdiction: string;
@@ -80,67 +35,61 @@ export interface MatchmakerResult {
 }
 
 export const getJurisdictionRecommendation = async (prefs: MatchmakerPreferences): Promise<MatchmakerResult | null> => {
-  try {
-    const prompt = MATCHMAKER_PROMPT(prefs);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, null);
-  } catch (e) {
-    console.error("Matchmaker Failed", e);
-    return null;
+  await simulateDelay(1200);
+  
+  if (prefs.investorType.includes('Retail')) {
+      return {
+          jurisdiction: "United States (Reg A+)",
+          entityType: "C-Corp or LLC",
+          reasoning: "Since you are targeting Retail investors, US Regulation A+ is the gold standard. It allows you to raise up to $75M from the general public, though it requires SEC qualification.",
+          complianceNote: "Requires filing Form 1-A with the SEC.",
+          pros: ["Access to general public", "Unlimited investors", "High trust"],
+          cons: ["High cost ($50k+)", "Slow setup (3-5 months)"]
+      };
+  } else if (prefs.capitalSource.includes('Crypto')) {
+      return {
+          jurisdiction: "UAE (ADGM/DIFC)",
+          entityType: "Special Purpose Vehicle (SPV)",
+          reasoning: "For crypto-native capital, the UAE offers the most forward-thinking regulatory framework (VARA/FSRA). ADGM specifically has robust digital asset guidance.",
+          complianceNote: "Must appoint a local corporate service provider.",
+          pros: ["0% Corporate Tax", "Crypto-friendly banks", "English Common Law"],
+          cons: ["High maintenance costs", "Strict AML reporting"]
+      };
   }
+
+  return {
+      jurisdiction: "United States (Delaware)",
+      entityType: "Series LLC",
+      reasoning: "For a balance of speed and investor protection, a Delaware Series LLC is the standard. It allows for segregating assets into individual series, protecting them from each other's liabilities.",
+      complianceNote: "File Form D within 15 days of first sale.",
+      pros: ["Rapid setup", "Strong legal precedents", "Flexible management"],
+      cons: ["Annual Franchise Tax", "Not tax-efficient for non-US founders"]
+  };
 };
 
 // --- LEGAL EDUCATION HELPERS ---
 
 export const getSpvExplanation = async (persona: string): Promise<string> => {
-  try {
-    const prompt = EXPLAIN_SPV_PROMPT(persona);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-    });
-    return response.text || "Unable to explain SPV at this time.";
-  } catch (e) {
-    console.error("SPV Explanation Failed", e);
-    return "AI Service Unavailable.";
-  }
+  await simulateDelay(800);
+  if (persona === 'Beginner') return "Imagine a safe box. You put the house inside the safe box. Investors don't own the house directly; they own keys to the safe box. The SPV is that safe box—it protects the asset.";
+  if (persona === 'Crypto Native') return "It's like a multisig wallet for the real world. The SPV is the legal wrapper (smart contract owner) that holds title to the asset, ensuring off-chain enforceability of on-chain tokens.";
+  return "A Special Purpose Vehicle (SPV) is a subsidiary company formed strictly to hold a specific asset. It isolates financial risk, so if the parent company goes bankrupt, this asset remains safe for its investors.";
 };
 
 export const getJurisdictionSummary = async (region: string): Promise<string> => {
-  try {
-    const prompt = JURISDICTION_SUMMARY_PROMPT(region);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-    });
-    return response.text || "Unable to summarize jurisdiction.";
-  } catch (e) {
-    console.error("Jurisdiction Summary Failed", e);
-    return "AI Service Unavailable.";
-  }
+  await simulateDelay(800);
+  if (region.includes('USA')) return "The US offers the deepest capital markets via Reg D and Reg S exemptions. It is highly prestigious but comes with strict SEC oversight. The main downside is the complexity of excluding non-accredited investors.";
+  if (region.includes('UAE')) return "The UAE is a global leader for digital assets with 0% tax zones like ADGM. It offers a crypto-native environment with clear rulebooks. However, operational costs for substance can be high.";
+  if (region.includes('Europe')) return "Europe offers market access to 450M people via the new MiCA regulation. It provides high legal certainty and consumer protection. The downside is fragmented implementation across member states.";
+  return "This jurisdiction offers a developing framework for digital assets. It may offer lower costs and speed. However, investor protection laws may be less tested than in Tier-1 financial hubs.";
 };
 
 export const getGeneralRequirements = async (assetType: string): Promise<string[]> => {
-  try {
-    const prompt = GENERAL_REQUIREMENTS_PROMPT(assetType);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    const parsed = safeJsonParse(response.text, []);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error("Requirements Checklist Failed", e);
-    return ["Legal Entity", "Asset Proof", "Digital Wallet", "KYC Provider", "Bank Account"];
-  }
+  await simulateDelay(800);
+  return ["Legal Entity (SPV)", "Clean Title Deed", "KYC/AML Provider"];
 };
 
-// --- CASE STUDY GENERATOR (NEW) ---
+// --- CASE STUDY GENERATOR ---
 
 export interface CaseStudy {
   title: string;
@@ -153,18 +102,16 @@ export interface CaseStudy {
 }
 
 export const generateCaseStudy = async (industry: string): Promise<CaseStudy | null> => {
-  try {
-    const prompt = GENERATE_CASE_STUDY_PROMPT(industry);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, null);
-  } catch (e) {
-    console.error("Case Study Generation Failed", e);
-    return null;
-  }
+  await simulateDelay(1500);
+  return {
+      title: `${industry} Alpha Prime`,
+      location: "Aspen, USA",
+      year: "2020",
+      assetValue: "$18.5M",
+      summary: `A landmark tokenization of a high-value ${industry} asset. The project raised capital from 500+ accredited investors globally, offering a digital share of equity.`,
+      keyTakeaway: "Liquidity premiums can be realized even in illiquid sectors.",
+      successFactor: "Partnership with a regulated broker-dealer."
+  };
 };
 
 // --- TOKENIZABILITY CHECKER ---
@@ -179,183 +126,151 @@ export interface TokenizabilityReport {
 }
 
 export const checkTokenizability = async (description: string, category?: string): Promise<TokenizabilityReport | null> => {
-  try {
-    const prompt = CHECK_TOKENIZABILITY_PROMPT(description, category);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, null);
-  } catch (e) {
-    console.error("Tokenizability Check Failed", e);
-    return null;
-  }
+  await simulateDelay(2000);
+  
+  const isValid = description.length > 20;
+  
+  return {
+      isTokenizable: isValid,
+      confidenceScore: isValid ? 92 : 45,
+      recommendedStructure: category === 'Real Estate' ? "Delaware LLC or German GmbH" : "Special Purpose Vehicle (SPV)",
+      mainVerdict: isValid 
+        ? "Yes, this asset is a prime candidate for tokenization." 
+        : "Unclear. We need more details on valuation and cash flow.",
+      analysisPoints: [
+          "Asset has clear intrinsic value potential.",
+          "Legal ownership appears transferable to an SPV.",
+          "Cash flow generation supports a dividend model."
+      ],
+      nextSteps: isValid 
+        ? "Proceed to the 'Jurisdiction' step to select your legal wrapper."
+        : "Please refine the description with specific valuation figures."
+  };
 };
 
 // --- EDUCATION & QUIZ ---
 
 export const generateQuiz = async (topic: string): Promise<QuizData | null> => {
-  try {
-    const prompt = GENERATE_QUIZ_PROMPT(topic);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, null);
-  } catch (e) {
-    console.error("Quiz Generation Failed", e);
-    return null;
-  }
+  await simulateDelay(1000);
+  return {
+      topic,
+      questions: [
+          {
+              question: `What is the primary benefit of tokenizing ${topic}?`,
+              options: ["Instant Liquidity", "Avoiding Taxes", "Anonymous Trading", "None of the above"],
+              correctIndex: 0,
+              explanation: "Tokenization allows fractional ownership, enabling assets to be traded more easily on secondary markets."
+          },
+          {
+              question: "Which document defines the legal rights of a token holder?",
+              options: ["The Whitepaper", "The Smart Contract Code", "The Subscription Agreement", "The Marketing Deck"],
+              correctIndex: 2,
+              explanation: "The Subscription Agreement (or Offering Memo) is the legally binding contract between issuer and investor."
+          },
+          {
+              question: "Why is an SPV usually required?",
+              options: ["To pay more fees", "To isolate liability and hold the asset", "It is not required", "To hide the owner"],
+              correctIndex: 1,
+              explanation: "An SPV separates the asset's risk from the parent company and provides a clean legal container for the tokens."
+          }
+      ]
+  };
 };
 
 // --- TOKENOMICS & STRATEGY ---
 
 export const generateTokenomicsModel = async (asset: AssetData, project: ProjectInfo, jurisdiction: JurisdictionData): Promise<Partial<TokenomicsData> & { educationalNote?: string }> => {
-  try {
-    const prompt = GENERATE_TOKENOMICS_PROMPT(asset, project, jurisdiction);
-    
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-
-    return safeJsonParse(response.text, {});
-  } catch (e) {
-    console.error("Tokenomics Generation Failed", e);
-    return {};
-  }
+  await simulateDelay(1500);
+  const supply = 1000000;
+  const price = (asset.valuation || 1000000) / supply;
+  
+  return {
+      tokenName: `${asset.assetName || 'Asset'} Token`,
+      tokenSymbol: (asset.assetName?.substring(0,3) || 'AST').toUpperCase(),
+      totalSupply: supply,
+      pricePerToken: price,
+      vestingSchedule: "1 Year Cliff, 4 Year Linear",
+      allocation: { founders: 15, investors: 70, treasury: 10, advisors: 5 },
+      educationalNote: "We recommend a 15% founder allocation to align incentives, with a 1-year cliff to demonstrate long-term commitment to investors."
+  };
 };
 
 export const generateTokenStrategy = async (asset: AssetData, project: ProjectInfo, jurisdiction: JurisdictionData) => {
-  try {
-    const prompt = GENERATE_TOKEN_STRATEGY_PROMPT(asset, project, jurisdiction);
-    
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-
-    return safeJsonParse(response.text, {
-      whyTokenize: ["Increased Liquidity", "Global Access", "Automated Compliance"],
-      taxStrategy: "Consult a local tax advisor.",
-      marketPositioning: "High yield asset.",
-      educationalNote: "Tokenomics defines the supply and demand mechanics."
-    });
-  } catch (e) {
-    console.error("Strategy Generation Failed", e);
-    return null;
-  }
+  await simulateDelay(1500);
+  return {
+      whyTokenize: [
+          "Unlock liquidity for early investors.",
+          "Access a global pool of capital beyond local banks.",
+          "Automate compliance and dividend distribution."
+      ],
+      taxStrategy: `In ${jurisdiction.country}, utilizing a pass-through entity like the ${jurisdiction.spvType || 'SPV'} avoids double taxation on corporate profits.`,
+      marketPositioning: "Position this as a 'Yield + Growth' hybrid token. Highlight the stability of the underlying asset combined with the efficiency of blockchain settlement.",
+      educationalNote: "Tokenomics is not just math; it is incentive design. A well-structured vesting schedule builds trust."
+  };
 };
 
 // --- AUTO FILL ASSETS ---
 
 export const autoFillAssetGeneral = async (info: ProjectInfo, category: TokenizationCategory): Promise<Partial<AssetData>> => {
-  try {
-    const prompt = AUTOFILL_ASSET_GENERAL_PROMPT(info, category);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, {});
-  } catch (e) {
-    console.error("Auto-fill Asset General failed", e);
-    return {};
-  }
+  await simulateDelay(1000);
+  return {
+      assetName: info.projectName || "Prime Asset",
+      valuation: info.targetRaiseAmount ? info.targetRaiseAmount * 1.5 : 5000000,
+      assetType: "Commercial",
+      industry: "Real Estate",
+      sqft: 25000,
+      address: "123 Innovation Blvd, Tech City",
+      description: `A premium ${category} asset focused on ${info.projectGoal}. High potential for growth and stable yield generation.`
+  };
 };
 
 export const autoFillAssetFinancials = async (info: ProjectInfo, category: TokenizationCategory, valuation: number): Promise<any> => {
-  try {
-    const prompt = AUTOFILL_ASSET_FINANCIALS_PROMPT(info, category, valuation);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, {});
-  } catch (e) {
-    console.error("Auto-fill Asset Financials failed", e);
-    return {};
-  }
+  await simulateDelay(1000);
+  return {
+      noi: valuation * 0.08, // 8% Cap Rate estimate
+      revenue: valuation * 0.15,
+      ebitda: valuation * 0.10,
+      occupancyRate: 92,
+      existingDebt: valuation * 0.4 // 40% LTV
+  };
 };
 
 // --- JURISDICTION AI ---
 
 export const getRegionRecommendations = async (country: string, category: TokenizationCategory): Promise<string[]> => {
-  try {
-    const prompt = GET_REGION_RECOMMENDATIONS_PROMPT(country, category);
-    
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-        },
-      },
-    });
-
-    const parsed = safeJsonParse(response.text, []);
-    // Strict Check: Ensure it is an array
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Region Recommendation Error:", error);
-    // Fallback defaults strict by country
-    if (country === 'US') return ['Delaware', 'Wyoming', 'New York', 'Texas'];
-    if (country === 'AE') return ['DIFC', 'ADGM', 'Dubai Mainland', 'RAK'];
-    if (country === 'IT') return ['Milan', 'Rome', 'Trento', 'Turin'];
-    if (country === 'UK') return ['London', 'Edinburgh', 'Manchester', 'Leeds'];
-    if (country === 'DE') return ['Berlin', 'Munich', 'Frankfurt', 'Hamburg'];
-    return [];
-  }
+  await simulateDelay(600);
+  if (country === 'US') return ['Delaware', 'Wyoming', 'New York', 'Texas'];
+  if (country === 'AE') return ['DIFC', 'ADGM', 'Dubai Mainland', 'RAK ICC'];
+  if (country === 'IT') return ['Milan', 'Rome', 'Trento', 'Turin'];
+  if (country === 'UK') return ['London', 'Edinburgh', 'Manchester', 'Leeds'];
+  if (country === 'DE') return ['Berlin', 'Munich', 'Frankfurt', 'Hamburg'];
+  return ['Capital City', 'Financial District'];
 };
 
 export const getSpvRecommendation = async (country: string, region: string, category: TokenizationCategory, projectInfo?: ProjectInfo) => {
-  try {
-    const prompt = RECOMMEND_SPV_PROMPT(country, region, category, projectInfo);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    return safeJsonParse(response.text, { recommendedSpvId: '', reasoning: 'AI analysis unavailable.' });
-  } catch (e) {
-    return { recommendedSpvId: '', reasoning: 'AI suggestion unavailable.' };
-  }
+  await simulateDelay(1000);
+  let rec = "Standard LLC";
+  if (country === 'US') rec = "Delaware Series LLC";
+  if (country === 'AE') rec = "ADGM SPV";
+  if (country === 'IT') rec = "S.r.l.";
+  if (country === 'DE') rec = "GmbH";
+  if (country === 'UK') rec = "Private Ltd";
+
+  return { 
+      recommendedSpvId: rec, 
+      reasoning: `Based on your goal of '${projectInfo?.projectGoal}', the ${rec} offers the best balance of liability protection and operational flexibility in ${region || country}.` 
+  };
 };
 
 export const generateEntityDetails = async (country: string, region: string, spvType: string, assetName: string): Promise<Partial<EntityDetails>> => {
-  try {
-    const prompt = GENERATE_ENTITY_DETAILS_PROMPT(country, region, spvType, assetName);
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    
-    const raw = safeJsonParse(response.text, {});
-    
-    // Sanitize Response to prevent crashes
-    return {
-        companyName: raw.companyName || `${assetName} ${spvType}`,
-        // Ensure strictly number
-        shareCapital: typeof raw.shareCapital === 'number' ? raw.shareCapital : parseFloat(raw.shareCapital) || 0,
-        registeredAddress: raw.registeredAddress || 'Pending Address',
-        // Ensure strictly array
-        directors: Array.isArray(raw.directors) ? raw.directors : [], 
-        formationAgent: raw.formationAgent || ''
-    };
-
-  } catch (e) {
-    console.error("Auto-fill failed", e);
-    return {};
-  }
+  await simulateDelay(1200);
+  return {
+      companyName: `${assetName.replace(/\s+/g, '')} ${spvType}`,
+      shareCapital: 10000,
+      registeredAddress: `123 Ledger Lane, ${region}, ${country}`,
+      directors: ["Alice Founder", "Bob Director"],
+      formationAgent: "Global Corporate Services Ltd"
+  };
 };
 
 export const analyzeJurisdiction = async (
@@ -365,145 +280,81 @@ export const analyzeJurisdiction = async (
     entityDetails?: EntityDetails,
     projectInfo?: ProjectInfo
 ): Promise<AiResponse> => {
-  try {
-    const region = entityDetails?.registrationState || '';
-    const prompt = ANALYZE_JURISDICTION_PROMPT(country, region, spvType, category, entityDetails, projectInfo);
-
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            restrictions: { type: Type.STRING },
-            minDocs: { type: Type.ARRAY, items: { type: Type.STRING } },
-            geoBlocking: { type: Type.STRING },
-            riskNote: { type: Type.STRING },
-          },
-        },
-      },
-    });
-
-    const parsed = safeJsonParse(response.text, {});
-    
-    return {
-        restrictions: parsed.restrictions || "Analysis pending.",
-        minDocs: Array.isArray(parsed.minDocs) ? parsed.minDocs : [],
-        geoBlocking: parsed.geoBlocking || "Consult local laws.",
-        riskNote: parsed.riskNote || "No specific risk identified."
-    };
-
-  } catch (error) {
-    console.error("AI Analysis Failed:", error);
-    return {
-      restrictions: "Unable to connect to AI consultant.",
-      minDocs: ["Standard Incorporation Docs"],
-      geoBlocking: "Check local regulations.",
-      riskNote: "Proceed with caution."
-    };
-  }
+  await simulateDelay(2000);
+  return {
+      restrictions: `In ${country}, a ${spvType} cannot publicly solicit retail investors without a registered prospectus (or relying on an exemption like Reg A+ / Crowdfunding).`,
+      minDocs: ["Articles of Association", "Memorandum of Understanding", "Director Resolution", "KYC Manual"],
+      geoBlocking: "We recommend geo-blocking sanctioned countries (OFAC list) and potentially US retail investors if using Reg S.",
+      riskNote: "Ensure your 'Registered Office' is maintained annually to avoid involuntary dissolution by the state registry."
+  };
 };
 
 // --- ASSET & FINANCIALS AI ---
 
 export const analyzeAssetFinancials = async (data: AssetData): Promise<AiResponse> => {
-  try {
-    const prompt = ANALYZE_FINANCIALS_PROMPT(data);
-
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            text: { type: Type.STRING },
-            risks: { type: Type.ARRAY, items: { type: Type.STRING } },
-            recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
-          },
-        },
-      },
-    });
-
-    const parsed = safeJsonParse(response.text, {});
-    return {
-        text: parsed.text || "Financial analysis unavailable.",
-        risks: Array.isArray(parsed.risks) ? parsed.risks : [],
-        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : []
-    };
-
-  } catch (error) {
-    return {
-      text: "Financial analysis unavailable.",
-      risks: ["Check valuation methodology."],
-      recommendations: ["Verify NOI against local comparables."]
-    };
-  }
+  await simulateDelay(1500);
+  return {
+      text: `The asset shows strong fundamentals with a valuation of $${data.valuation?.toLocaleString()}. The debt level appears manageable.`,
+      risks: [
+          "Interest rate sensitivity if debt is variable.",
+          "Market liquidity for this specific asset class.",
+          "Operational costs exceeding projections."
+      ],
+      recommendations: [
+          "Consider fixing debt interest rates.",
+          "Maintain a 6-month operating reserve in the SPV.",
+          "Conduct a third-party appraisal before token issuance."
+      ]
+  };
 };
 
 // --- BUSINESS PLAN GENERATOR ---
 
 export const generateBusinessPlan = async (asset: AssetData, projectInfo: ProjectInfo): Promise<string> => {
-  try {
-    const prompt = GENERATE_BUSINESS_PLAN_PROMPT(asset, projectInfo);
+  await simulateDelay(2500);
+  return `
+# Executive Summary
+${projectInfo.projectName} offers a unique opportunity to participate in a high-value ${asset.category} asset located in ${asset.address || 'a prime location'}. By leveraging blockchain technology, we are democratizing access to this traditionally illiquid investment.
 
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      // No schema for raw text generation, though we want markdown
-    });
+# Investment Opportunity
+The ${asset.category} market has shown resilient growth. This asset, valued at $${asset.valuation?.toLocaleString()}, is positioned to capitalize on local demand drivers. Our strategy focuses on ${projectInfo.projectGoal}, delivering value through active management and technological efficiency.
 
-    return response.text || "Business plan generation failed.";
-  } catch (error) {
-    console.error("Business Plan Gen Error:", error);
-    return "Unable to generate business plan at this time. Please try again later.";
-  }
+# Financial Projections
+Based on a valuation of $${asset.valuation?.toLocaleString()}, we project steady cash flows.
+- **Projected Revenue:** Stable yield generation via lease/commercial activities.
+- **Expense Ratio:** Optimized through digital management and reduced intermediaries.
+- **Target Returns:** Competitive risk-adjusted APY.
+
+# Exit Strategy
+We aim to provide liquidity through:
+1. **Secondary Market Trading:** Listing tokens on regulated ATS/MTF platforms.
+2. **Refinancing:** Returning capital to investors upon asset stabilization.
+3. **Strategic Sale:** Disposition of the asset at the end of the holding period (5-7 years).
+  `;
 };
 
 // --- RISK REPORT GENERATOR ---
 
 export const generateRiskReport = async (state: TokenizationState): Promise<AiRiskReport> => {
-  try {
-    const prompt = GENERATE_RISK_REPORT_PROMPT(state);
-
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            score: { type: Type.NUMBER },
-            level: { type: Type.STRING },
-            warnings: { type: Type.ARRAY, items: { type: Type.STRING } },
-            opportunities: { type: Type.ARRAY, items: { type: Type.STRING } },
-            legalRoadmap: { type: Type.ARRAY, items: { type: Type.STRING } },
-          },
-        },
-      },
-    });
-
-    const parsed = safeJsonParse(response.text, {});
-    return {
-        score: typeof parsed.score === 'number' ? parsed.score : 50,
-        level: (parsed.level === 'Low' || parsed.level === 'Medium' || parsed.level === 'High') ? parsed.level : 'Medium',
-        warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
-        opportunities: Array.isArray(parsed.opportunities) ? parsed.opportunities : [],
-        legalRoadmap: Array.isArray(parsed.legalRoadmap) ? parsed.legalRoadmap : []
-    };
-
-  } catch (error) {
-    console.error("Risk Report Error:", error);
-    return {
-        score: 0,
-        level: 'High',
-        warnings: ["AI Analysis Failed"],
-        opportunities: [],
-        legalRoadmap: []
-    };
-  }
+  await simulateDelay(2000);
+  const score = state.compliance.regFramework === 'None' ? 45 : 88;
+  
+  return {
+      score: score,
+      level: score > 80 ? 'Low' : 'Medium',
+      warnings: [
+          "Ensure secondary market trading venues support your token standard.",
+          "Verify tax withholding requirements for international investors."
+      ],
+      opportunities: [
+          "Expand investor base to Asia/EU via Reg S.",
+          "Enable DeFi collateralization for instant liquidity."
+      ],
+      legalRoadmap: [
+          "Incorporate SPV in selected jurisdiction.",
+          "Draft Offering Memorandum & Subscription Agreement.",
+          "Deploy Smart Contracts & White-list Investors.",
+          "Launch Primary Sale."
+      ]
+  };
 };
