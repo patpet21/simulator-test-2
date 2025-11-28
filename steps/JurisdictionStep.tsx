@@ -109,37 +109,44 @@ const JurisdictionGuide: React.FC<{ meta: JurisdictionMeta }> = ({ meta }) => (
                         <span>{meta.flag}</span>
                         <span>Why Choose {meta.name}?</span>
                     </h3>
-                    <div className="px-3 py-1 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider border border-white/20">
+                    <div className="px-3 py-1 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider border border-white/20 backdrop-blur-md">
                         {meta.regimeHint}
                     </div>
                 </div>
-                <p className="text-brand-100 text-sm leading-relaxed mb-4">
+                <p className="text-brand-100 text-sm leading-relaxed mb-6 border-b border-white/10 pb-6">
                     {meta.guide.intro}
                 </p>
-                <div className="bg-white/10 rounded-lg p-3 border border-white/20">
-                    <p className="text-xs font-bold text-brand-200 uppercase mb-1">Critical Requirement</p>
-                    <p className="text-sm font-medium">{meta.guide.keyRequirement}</p>
-                </div>
-
-                {meta.guide.popularAssetTypes && (
-                    <div className="mt-4">
-                        <p className="text-xs font-bold text-brand-200 uppercase mb-2 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-                            Popular in this Regime
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-white/10 rounded-xl p-4 border border-white/10">
+                        <p className="text-[10px] font-bold text-brand-200 uppercase mb-1 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                            Critical Requirement
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                            {meta.guide.popularAssetTypes.map((type, i) => (
-                                <span key={i} className="px-2 py-1 bg-white/10 rounded text-[10px] font-semibold border border-white/10 hover:bg-white/20 transition-colors cursor-default">
-                                    {type}
-                                </span>
-                            ))}
-                        </div>
+                        <p className="text-xs font-medium leading-relaxed opacity-90">{meta.guide.keyRequirement}</p>
                     </div>
-                )}
+
+                    {meta.guide.popularAssetTypes && (
+                        <div className="bg-white/10 rounded-xl p-4 border border-white/10 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-4 -mt-4"></div>
+                            <p className="text-[10px] font-bold text-brand-200 uppercase mb-3 flex items-center gap-1 relative z-10">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                Top Assets for {meta.name}
+                            </p>
+                            <div className="flex flex-wrap gap-2 relative z-10">
+                                {meta.guide.popularAssetTypes.map((type, i) => (
+                                    <span key={i} className="px-2 py-1 bg-brand-500/30 rounded text-[10px] font-bold uppercase tracking-wide border border-brand-400/30 text-white shadow-sm">
+                                        {type}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-            <div className="md:w-1/3 bg-black/20 rounded-xl p-4 backdrop-blur-sm border border-white/10">
-                <p className="text-xs font-bold text-white/60 uppercase mb-2">Best Suited For</p>
-                <p className="text-sm font-semibold text-white">{meta.guide.bestFor}</p>
+            <div className="md:w-1/3 bg-slate-900/30 rounded-xl p-5 backdrop-blur-md border border-white/10 flex flex-col justify-center">
+                <p className="text-[10px] font-bold text-white/50 uppercase mb-2 tracking-widest text-center">Best Suited For</p>
+                <p className="text-sm font-bold text-white text-center leading-relaxed">{meta.guide.bestFor}</p>
             </div>
         </div>
     </div>

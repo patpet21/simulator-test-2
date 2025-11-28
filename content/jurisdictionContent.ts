@@ -36,12 +36,12 @@ export interface JurisdictionMeta {
 export const JURISDICTION_METADATA: JurisdictionMeta[] = [
     { 
         code: 'US', name: 'United States', flag: '🇺🇸', tagline: 'Global Standard',
-        regimeHint: 'SEC Framework (Reg D, Reg S, Reg A+)',
+        regimeHint: 'SEC Framework (Reg D, Reg S)',
         guide: {
             intro: "The most popular choice for global investors due to flexible LLC laws and strong property rights.",
             keyRequirement: "You MUST appoint a 'Registered Agent' in the state of formation to receive legal mail.",
             bestFor: "Real Estate syndication, Venture Capital, and projects seeking US accredited investors.",
-            popularAssetTypes: ["Real Estate Equity", "LLC Interests", "Reg D Offerings", "Venture Funds"]
+            popularAssetTypes: ["Real Estate (Reg D)", "Venture Funds (Reg D)", "LLC Interests", "Private Credit"]
         }
     },
     { 
@@ -56,12 +56,12 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
     },
     { 
         code: 'DE', name: 'Germany', flag: '🇩🇪', tagline: 'High Trust',
-        regimeHint: 'BaFin & eWpG (Electronic Securities)',
+        regimeHint: 'BaFin & eWpG',
         guide: {
             intro: "Offers the highest level of investor trust in the EU. Strict but highly respected legal framework.",
             keyRequirement: "Formation requires a physical meeting with a German Notary (Notar) to sign the deed.",
             bestFor: "Institutional-grade Real Estate and projects targeting conservative EU capital.",
-            popularAssetTypes: ["eWpG Crypto Securities", "Bearer Bonds", "Fund Units (Anteile)", "Green Bonds"]
+            popularAssetTypes: ["eWpG Crypto Securities", "Bearer Bonds", "Real Estate Funds (KG)", "Green Bonds"]
         }
     },
     { 
@@ -71,17 +71,17 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
             intro: "Strategic access to the Eurozone market. Recent laws favor 'Innovative Startups' for equity crowdfunding.",
             keyRequirement: "Mandatory 'Notaio' (Public Notary) for incorporation and a PEC (Certified Email) address.",
             bestFor: "Luxury Real Estate, Art Tokenization, and EU-compliant equity raises.",
-            popularAssetTypes: ["SME Equity (Crowdfunding)", "Participating Financial Instruments", "Mini-Bonds", "Real Estate SPVs"]
+            popularAssetTypes: ["SME Equity (Crowdfunding)", "Participating Instruments", "Mini-Bonds", "Real Estate SPVs"]
         }
     },
     { 
         code: 'UAE', name: 'UAE', flag: '🇦🇪', tagline: 'Crypto Haven',
-        regimeHint: 'VARA / ADGM FSRA / DIFC DFSA',
+        regimeHint: 'VARA / ADGM / DIFC',
         guide: {
             intro: "The world's leading jurisdiction for Web3 and Digital Assets, specifically in ADGM and DIFC free zones.",
             keyRequirement: "You usually need a 'Corporate Service Provider' to act as your local company secretary.",
             bestFor: "DAOs, Web3 Native projects, and tax-efficient asset holding.",
-            popularAssetTypes: ["Tokenized Real Estate", "Sukuk (Islamic Bonds)", "Investment Fund Units", "DAO Tokens"]
+            popularAssetTypes: ["Tokenized Real Estate", "Sukuk (Islamic Bonds)", "VC Fund Units", "DAO Tokens"]
         }
     },
 ];
