@@ -29,6 +29,7 @@ export interface JurisdictionMeta {
         intro: string;
         keyRequirement: string;
         bestFor: string;
+        popularAssetTypes: string[]; // Specific examples of assets favored by the regime
     }
 }
 
@@ -39,7 +40,8 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
         guide: {
             intro: "The most popular choice for global investors due to flexible LLC laws and strong property rights.",
             keyRequirement: "You MUST appoint a 'Registered Agent' in the state of formation to receive legal mail.",
-            bestFor: "Real Estate syndication, Venture Capital, and projects seeking US accredited investors."
+            bestFor: "Real Estate syndication, Venture Capital, and projects seeking US accredited investors.",
+            popularAssetTypes: ["Real Estate Equity", "LLC Interests", "Reg D Offerings", "Venture Funds"]
         }
     },
     { 
@@ -48,7 +50,8 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
         guide: {
             intro: "A top-tier jurisdiction for Fintech and strictly regulated securities. Offers rapid setup via Companies House.",
             keyRequirement: "You must maintain a 'PSC Register' (Persons with Significant Control) declaring owners >25%.",
-            bestFor: "Fintech startups, REITs, and projects targeting UK/Commonwealth investors."
+            bestFor: "Fintech startups, REITs, and projects targeting UK/Commonwealth investors.",
+            popularAssetTypes: ["Digital Securities", "Private Equity Shares", "Debt Instruments", "REITs"]
         }
     },
     { 
@@ -57,7 +60,8 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
         guide: {
             intro: "Offers the highest level of investor trust in the EU. Strict but highly respected legal framework.",
             keyRequirement: "Formation requires a physical meeting with a German Notary (Notar) to sign the deed.",
-            bestFor: "Institutional-grade Real Estate and projects targeting conservative EU capital."
+            bestFor: "Institutional-grade Real Estate and projects targeting conservative EU capital.",
+            popularAssetTypes: ["eWpG Crypto Securities", "Bearer Bonds", "Fund Units (Anteile)", "Green Bonds"]
         }
     },
     { 
@@ -66,7 +70,8 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
         guide: {
             intro: "Strategic access to the Eurozone market. Recent laws favor 'Innovative Startups' for equity crowdfunding.",
             keyRequirement: "Mandatory 'Notaio' (Public Notary) for incorporation and a PEC (Certified Email) address.",
-            bestFor: "Luxury Real Estate, Art Tokenization, and EU-compliant equity raises."
+            bestFor: "Luxury Real Estate, Art Tokenization, and EU-compliant equity raises.",
+            popularAssetTypes: ["SME Equity (Crowdfunding)", "Participating Financial Instruments", "Mini-Bonds", "Real Estate SPVs"]
         }
     },
     { 
@@ -75,7 +80,8 @@ export const JURISDICTION_METADATA: JurisdictionMeta[] = [
         guide: {
             intro: "The world's leading jurisdiction for Web3 and Digital Assets, specifically in ADGM and DIFC free zones.",
             keyRequirement: "You usually need a 'Corporate Service Provider' to act as your local company secretary.",
-            bestFor: "DAOs, Web3 Native projects, and tax-efficient asset holding."
+            bestFor: "DAOs, Web3 Native projects, and tax-efficient asset holding.",
+            popularAssetTypes: ["Tokenized Real Estate", "Sukuk (Islamic Bonds)", "Investment Fund Units", "DAO Tokens"]
         }
     },
 ];

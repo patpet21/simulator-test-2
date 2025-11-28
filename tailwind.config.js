@@ -3,6 +3,7 @@ export default {
   content: [
     "./index.html",
     "./**/*.{js,ts,jsx,tsx}",
+    "!./node_modules/**" 
   ],
   theme: {
     extend: {
@@ -19,6 +20,9 @@ export default {
           700: '#0369a1',
           900: '#0c4a6e',
         }
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(14, 165, 233, 0.3)',
       }
     },
   },

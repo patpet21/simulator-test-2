@@ -120,6 +120,22 @@ const JurisdictionGuide: React.FC<{ meta: JurisdictionMeta }> = ({ meta }) => (
                     <p className="text-xs font-bold text-brand-200 uppercase mb-1">Critical Requirement</p>
                     <p className="text-sm font-medium">{meta.guide.keyRequirement}</p>
                 </div>
+
+                {meta.guide.popularAssetTypes && (
+                    <div className="mt-4">
+                        <p className="text-xs font-bold text-brand-200 uppercase mb-2 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                            Popular in this Regime
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {meta.guide.popularAssetTypes.map((type, i) => (
+                                <span key={i} className="px-2 py-1 bg-white/10 rounded text-[10px] font-semibold border border-white/10 hover:bg-white/20 transition-colors cursor-default">
+                                    {type}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
             <div className="md:w-1/3 bg-black/20 rounded-xl p-4 backdrop-blur-sm border border-white/10">
                 <p className="text-xs font-bold text-white/60 uppercase mb-2">Best Suited For</p>
